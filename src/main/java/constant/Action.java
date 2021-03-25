@@ -46,4 +46,9 @@ public class Action {
         this.fromValue = fromValue;
         this.toValue = toValue;
     }
+
+    // END
+    public Action(Type type) {
+        this.type = type;
+    }
 }

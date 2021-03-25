@@ -19,7 +19,12 @@ public class Simulation {
     private Integer[] sortedList;
     // 调度实例
     private Scheduler scheduler = null;
-    public static Long intervalTime;
+    // 播放动画频率，默认间隔800ms一次
+    public static Integer intervalTime = 800;
+    // 是否暂停
+    public static Boolean isPause = false;
+    // 用来作为定时器
+    public static ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
 
     public Simulation() {
         this.dispatch = new Dispatch();
@@ -33,33 +38,36 @@ public class Simulation {
     public void init() {
         // 如果之前已经有了scheduler，再重新初始化之前要先停止它
         if (this.scheduler != null) {
-            this.scheduler.setPause(true);
+            this.setPause(true);
         }
+        // 排序不影响原数组
+        Integer[] clonedList = (Integer[]) this.list.clone();
         // actionList依赖注入
-        BubbleSort bubbleSort = new BubbleSort(this.list, this.actionList);
+        BubbleSort bubbleSort = new BubbleSort(clonedList, this.actionList);
         Integer[] sortedList = bubbleSort.getList();
         this.sortedList = sortedList;
+        // 准备对生成的actionList调度
         Scheduler scheduler = new Scheduler(this.actionList, this.dispatch);
         scheduler.setNextExecutedInstance(scheduler);
         this.scheduler = scheduler;
-        this.initShow();
     }
 
     // 展示初始数组
-    public void initShow() {
-        this.scheduler.setPause(true);
-        this.scheduler.initShow(this.sortedList);
+    public void show() {
+        this.scheduler.initShow(this.list);
     }
 
     // 播放
     public void play() {
-        this.scheduler.setPause(false);
+        if (Simulation.isPause == true) {
+            this.setPause(false);
+        }
         this.scheduler.run();
     }
 
     // 暂停
-    public void pause() {
-        this.scheduler.setPause(true);
+    public void setPause(Boolean isPause) {
+        Simulation.isPause = isPause;
     }
 
     // 重新设置数组
@@ -72,8 +80,7 @@ public class Simulation {
         this.dispatch.setType(type);
     }
 
-    public void setSpeed(Long intervalTime) {
-        this.scheduler.setIntervalTime(intervalTime);
+    public void setSpeed(Integer intervalTime) {
         Simulation.intervalTime = intervalTime;
     }
 }
@@ -86,10 +93,6 @@ class Scheduler implements Runnable {
     private Integer currentIndex = 0;
     // 负责派发渲染的实例
     private Dispatch dispatch;
-    // 播放动画频率，默认间隔800ms一次
-    private long intervalTime = 800;
-    // 是否暂停
-    private Boolean isPause = false;
     private Scheduler nextExecutedInstance = null;
 
 
@@ -105,22 +108,25 @@ class Scheduler implements Runnable {
 
     public void run() {
         Integer actionListSize = this.actionList.size();
-        if (this.currentIndex + 1 > actionListSize || this.isPause == true) {
-            if (this.isPause == true) {
+        if (this.currentIndex + 1 > actionListSize || Simulation.isPause == true) {
+            if (Simulation.isPause == true) {
                 System.out.println("暂停");
             } else {
+                // 通知结束
+                Action endAction = new Action(Type.END);
+                this.dispatch.dispatch(endAction);
                 System.out.println("结束");
             }
             return;
         }
         Action action = this.actionList.get(this.currentIndex);
+        // 交给渲染层渲染action
         this.dispatch.dispatch(action);
         this.currentIndex++;
-        Scheduler scheduler = new Scheduler(this.actionList, this.dispatch);
-        scheduler.setCurrentIndex(this.currentIndex);
-        ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
+
         if (this.nextExecutedInstance != null) {
-            timer.schedule(this.nextExecutedInstance, this.intervalTime, TimeUnit.MILLISECONDS);
+            // 每隔 Simulation.intervalTime ms run方法被调用一次，即每隔一定时间遍历渲染action一次
+            Simulation.timer.schedule(this.nextExecutedInstance, Simulation.intervalTime, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -128,15 +134,7 @@ class Scheduler implements Runnable {
         this.currentIndex = currentIndex;
     }
 
-    public void setPause(Boolean isPause) {
-        this.isPause = isPause;
-    }
-
     public void setNextExecutedInstance(Scheduler nextExecutedInstance) {
         this.nextExecutedInstance = nextExecutedInstance;
-    }
-
-    public void setIntervalTime(Long intervalTime) {
-        this.intervalTime = intervalTime;
     }
 }

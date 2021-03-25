@@ -69,7 +69,7 @@ public class InterfaceRender {
         frame.setVisible(true);
 
         // test
-        Integer[] list = {1, 2, 3, 4, 5, 6};
+        Integer[] list = {2, 6, 4, 3, 1, 5};
         this.setInputArray(list);
         this.play();
     }
@@ -82,7 +82,7 @@ public class InterfaceRender {
     }
 
     // 设置速度
-    private void setSpeed(Long intervalTime) {
+    private void setSpeed(Integer intervalTime) {
         this.simulation.setSpeed(intervalTime);
     }
 
@@ -93,11 +93,12 @@ public class InterfaceRender {
 
     // 暂停仿真
     private void pause() {
-        this.simulation.pause();
+        this.simulation.setPause(true);
     }
 
     // 初始化仿真
     private void initShow() {
         this.simulation.init();
+        this.simulation.show();
     }
 }
